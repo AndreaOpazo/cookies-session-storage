@@ -4,6 +4,7 @@ import http from "http";
 import path from "path";
 import { Server }from "socket.io";
 import Utils, { getMessages, updateMessages } from './utils';
+import session, { Session } from 'express-session';
 
 const app = express();
 const router = express.Router();
@@ -11,8 +12,18 @@ const server = http.createServer(app);
 const ioServer = new Server(server);
 const port = 8080;
 
+const sessionHandler = session({
+  secret: 'secreto',
+  resave: true,
+  rolling: true,
+  saveUninitialized: true,
+  cookie: {
+    maxAge: 60 * 1000,
+  },
+});
+
 server.listen(port, () => {
-  console.log(`Server escuchando en port ${port}`);
+  console.log(`Server listening to in port ${port}`);
 });
 
 server.on("error", (error) => {
@@ -26,20 +37,67 @@ app.engine(
   handlebars({
     extname: `.${ENGINE_NAME}`,
     layoutsDir: path.join(__dirname, './views/layouts'),
-    defaultLayout: path.join(__dirname, './views/layouts/index.hbs'), 
   })
 );
 
 app.set("view engine", ENGINE_NAME);
 app.set("views", path.join(__dirname, './views')); 
 
+app.use(sessionHandler);
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/api', router);
 
-app.get("/", (_req: Request, res: Response) => {
-  res.sendFile("index.html", { root: path.join(__dirname, './public') });
+app.get("/home", (request: Request, response: Response) => {
+  const { username } = request.session as Session & {username: String};
+  if (username) {
+    response.render("welcome.hbs", { username, layout: 'home' })
+  } else {
+    response.redirect("/login");
+  }
+});
+
+app.get("/login", (request: Request, response: Response ) => {
+  const { username } = request.session as Session & {username: String};
+  if (username) {
+    response.redirect("/home");
+  } else {
+    response.sendFile("login.html", { root: path.join(__dirname, '../public') });
+  }
+});
+
+app.post("/login/save", (request: Request, response: Response ) => {
+  const { user } = request.body;
+  if (user !== '') {
+    const session = request.session as Session & {username: String};
+    session.username = user;
+    response.redirect("/home");
+  } else {
+    response.redirect("/login");
+  }
+});
+
+app.get("/logout", (request: Request, response: Response ) => {
+  const { username } = request.session as Session & {username: String};
+
+  request.session.destroy((error) => {
+    if (error) {
+      return response
+        .json({
+          error,
+        });
+    }
+    if (username) {
+      response.send(`<b>Hasta luego ${username}</b>
+        <script>
+          setTimeout(function () {
+            window.location = "/login";
+          }, 2000)
+        </script>
+      `);
+    }
+  });
 });
 
 ioServer.on("connection", async (socket) => {
@@ -54,7 +112,7 @@ ioServer.on("connection", async (socket) => {
 
 app.get("/productos/vista", async (_: Request, res: Response) => {
   const data = await Utils.getAllProducts();
-  res.render("main.hbs", { data });
+  res.render("main.hbs", { data, layout: 'index' });
 });
 
 router.get('/productos/listar', async (_: Request, res: Response) => {

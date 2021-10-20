@@ -7,6 +7,7 @@
     "@types/socket.io": "^3.0.2",
     "express": "^4.17.1",
     "express-handlebars": "^5.3.3",
+    "express-session": "^1.17.2",
     "mongoose": "^6.0.8",
     "nodemon": "^2.0.13",
     "socket.io": "^4.2.0",
@@ -17,6 +18,7 @@
   "devDependencies": {
     "@types/express": "^4.17.13",
     "@types/express-handlebars": "^5.3.1",
+    "@types/express-session": "^1.17.4",
     "@types/node": "^16.9.2"
   },
   "scripts": {

@@ -1,38 +1,52 @@
-const socket = io();
-
-socket.on("productList", (data) => {
-  const template = Handlebars.compile(`
-    {{#if data}}
-      <div class="table-responsive container">
-        <table class="table table-dark table-sm text-center">
-          <thead>
-            <tr>
-              <th scope="col">Nombre</th>
-              <th scope="col">Precio</th>
-              <th scope="col">Foto</th>
-            </tr>
-          </thead>
-          <tbody>
-              {{#each data}}
-                <tr>
-                  <td scope="row">{{this.title}}</td>
-                  <td>{{this.price}}</td>
-                  <td>
-                    <img src={{this.thumbnail}} width="50rem">
-                  </td>
-                </tr>
-              {{/each}}
-          </tbody>
-        </table>
-      </div>
-    {{else}}
-      <div class="alert alert-danger container" role="alert">
-        No hay productos!
-      </div>
-    {{/if}}
-  `);
-  document.getElementById("table").innerHTML = template({ data });
-});
+if (typeof io === 'function') {
+  const socket = io();
+  
+  socket.on("productList", (data) => {
+    const template = Handlebars.compile(`
+      {{#if data}}
+        <div class="table-responsive container">
+          <table class="table table-dark table-sm text-center">
+            <thead>
+              <tr>
+                <th scope="col">Nombre</th>
+                <th scope="col">Precio</th>
+                <th scope="col">Foto</th>
+              </tr>
+            </thead>
+            <tbody>
+                {{#each data}}
+                  <tr>
+                    <td scope="row">{{this.title}}</td>
+                    <td>{{this.price}}</td>
+                    <td>
+                      <img src={{this.thumbnail}} width="50rem">
+                    </td>
+                  </tr>
+                {{/each}}
+            </tbody>
+          </table>
+        </div>
+      {{else}}
+        <div class="alert alert-danger container" role="alert">
+          No hay productos!
+        </div>
+      {{/if}}
+    `);
+    document.getElementById("table").innerHTML = template({ data });
+  });
+  
+  socket.on("messageList", (data) => {
+    document.getElementById("msg-core").innerHTML = data
+      .map(({emailUser, text, date}) => `
+        <div>
+          <b style="color: blue;">${emailUser}</b>
+          <span style="color: brown;">[${date}]<i style="color: green;"> : ${text}</i></span>
+        </div>`
+      )
+      .join(" ");
+    clearInputs();
+  });
+};
 
 const formIsValid = () => {
   const emailUser = document.getElementById("email-user").value;
@@ -40,10 +54,14 @@ const formIsValid = () => {
   return emailUser.trim() !== "" && text.trim() !== ""
 };
 
-document.querySelector("#submit").addEventListener("click", (e) => {
-  e.preventDefault();
-  sendMessage()
-})
+const submitMsgBtn = document.querySelector("#submit");
+
+if (submitMsgBtn) {
+  submitMsgBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    sendMessage()
+  })
+};
 
 const getActualDate = () => {
   const date = new Date();
@@ -75,18 +93,6 @@ const sendMessage = () => {
   });
   return false;
 };
-
-socket.on("messageList", (data) => {
-  document.getElementById("msg-core").innerHTML = data
-    .map(({emailUser, text, date}) => `
-      <div>
-        <b style="color: blue;">${emailUser}</b>
-        <span style="color: brown;">[${date}]<i style="color: green;"> : ${text}</i></span>
-      </div>`
-    )
-    .join(" ");
-  clearInputs();
-});
 
 const clearInputs = () => {
   document.getElementById("email-user").value = "";
